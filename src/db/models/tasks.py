@@ -1,5 +1,5 @@
 from tortoise import Model, fields
-from base import Level
+from .base import Level
 
 
 # Модель для задач
