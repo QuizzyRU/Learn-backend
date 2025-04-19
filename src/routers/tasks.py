@@ -81,7 +81,7 @@ async def execute_query(task_id: UUID, query: str):
         raise HTTPException(status_code=404, detail="Temporary task file not found")
 
     if solution.status == Status.FINISH:
-        return HTTPException(status_code=403, detail="Solution is finished")
+        raise HTTPException(status_code=403, detail="Solution is finished")
 
     solution.status = Status.SOLVE
     await solution.save()
@@ -108,7 +108,7 @@ async def visualize_database(task_id: UUID):
         raise HTTPException(status_code=404, detail="Temporary task file not found")
 
     if solution.status == Status.FINISH:
-        return HTTPException(status_code=403, detail="Solution is finished")
+        raise HTTPException(status_code=403, detail="Solution is finished")
 
     try:
         with sqlite3.connect(temp_file_path) as conn:
@@ -141,7 +141,7 @@ async def solve_task(task_id: UUID, answer: str):
     if not solution:
         raise HTTPException(status_code=404, detail="Solution not found")
     if solution.status == Status.FINISH:
-        return HTTPException(status_code=403, detail="Solution is finished")
+        raise HTTPException(status_code=403, detail="Solution is finished")
     if solution.task.answer == answer:
         solution.status = Status.FINISH
         await solution.save()
