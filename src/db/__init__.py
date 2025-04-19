@@ -1,6 +1,8 @@
 from tortoise import Tortoise
 from .models.results import Results
 from .models.tasks import Tasks
+from .models.solution import Solution
+from .models.base import Status, Level
 
 async def init_db():
     await Tortoise.init(

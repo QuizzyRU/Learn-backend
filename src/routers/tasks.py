@@ -3,24 +3,51 @@ import sqlite3
 import os
 import shutil
 from uuid import uuid4
-from src.db.models.tasks import Tasks
-from src.schemas.tasks import ExecuteQueryResponseSchema, VisualizeDatabaseResponseSchema, GetTaskResponseSchema
+from src.db import Tasks, Solution, Status
+from src.schemas.tasks import ExecuteQueryResponseSchema, \
+                              VisualizeDatabaseResponseSchema, \
+                              GetTaskResponseSchema, \
+                              Task, \
+                              AllTasksResponseSchema, \
+                              SolutionResponseSchema
 
 router = APIRouter()
 TEMP_DIR = "temp_tasks"
 
 os.makedirs(TEMP_DIR, exist_ok=True)
 
-@router.get("/{task_id}", response_model=GetTaskResponseSchema)
+@router.get("/all", response_model=AllTasksResponseSchema)
+async def get_all_tasks():
+    tasks = await Tasks.all()
+    result = [Task(id=task.id, level=task.level, db_path=task.db_path, price=task.price) for task in tasks]
+    return {"result": result}
+
+@router.post("/start/{task_id}", response_model=SolutionResponseSchema)
 async def get_task(task_id: str):
     task = await Tasks.get_or_none(id=task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
+    
+    id = uuid4()
+    solution = await Solution.create(
+        id=id,
+        task=task,
+        status=Status.START
+    )
 
-    temp_file_path = os.path.join(TEMP_DIR, f"{uuid4()}.sqlite")
+    temp_file_path = os.path.join(TEMP_DIR, f"{id}.sqlite")
     shutil.copy(task.db_path, temp_file_path)
 
-    return {"temp_file_path": temp_file_path}
+    return SolutionResponseSchema(
+        id=solution.id,
+        task=Task(
+            id=task.id,
+            level=task.level,
+            db_path=task.db_path,
+            price=task.price
+        ),
+        status=solution.status
+    )
 
 @router.post("/{task_id}/execute", response_model=ExecuteQueryResponseSchema)
 async def execute_query(task_id: str, query: str):

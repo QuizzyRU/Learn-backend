@@ -6,3 +6,8 @@ class Level(Enum):
     ADVANCED = "Advanced"
     EXPERT = "Expert"
     MASTER = "Master"
+
+class Status(Enum):
+    START = "started"
+    SOLVE = "solve"
+    FINISH = "finish"
