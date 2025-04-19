@@ -3,15 +3,19 @@ from uuid import uuid4
 import os
 from src.db.models.tasks import Tasks
 from src.schemas.tasks import UploadTaskSchema, UploadTaskResponseSchema
+from src.security.middleware import JWTBearer
 
 router = APIRouter()
+
+admin_auth = JWTBearer(admin_required=True)
 
 TASKS_DIR = "tasks"
 
 @router.post("/upload-task/", response_model=UploadTaskResponseSchema)
 async def upload_task(
     file: UploadFile, 
-    task_data: UploadTaskSchema = Depends()
+    task_data: UploadTaskSchema = Depends(),
+    user = Depends(admin_auth)
 ):
     os.makedirs(TASKS_DIR, exist_ok=True)
 

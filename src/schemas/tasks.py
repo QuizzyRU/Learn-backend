@@ -1,7 +1,9 @@
 from uuid import UUID
 from pydantic import BaseModel
 from typing import List, Dict, Any
+from datetime import datetime
 from src.db import Level, Status
+from .user import UserResponseSchema
 
 class UploadTaskSchema(BaseModel):
     name: str
@@ -39,6 +41,22 @@ class SolutionResponseSchema(BaseModel):
     task: Task
     status: Status
 
+class ResultResponseSchema(BaseModel):
+    id: UUID
+    task: Task
+    user: UserResponseSchema
+    points_earned: int
+
 class SolveResponseSchema(BaseModel):
     message: str
     solution: SolutionResponseSchema
+    result: ResultResponseSchema | None = None
+
+class UserTaskStatistics(BaseModel):
+    total_tasks_completed: int
+    total_points_earned: int
+    tasks_by_level: Dict[Level, int]
+    recent_results: List[ResultResponseSchema]
+
+class UserProgressResponse(BaseModel):
+    statistics: UserTaskStatistics
