@@ -1,9 +1,14 @@
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
 from src.security.middleware import JWTBearer
-from src.schemas.user import UserResponseSchema, UserUpdateSchema
-from src.db.models.user import User
+from src.schemas.user import UserResponseSchema, UserUpdateSchema, UsersResponseSchema
+from src.schemas.tasks import Task, \
+                              ResultResponseSchema, \
+                              UserTaskStatistics, \
+                              UserProgressResponse
+from src.db import User, Results
 import os
 import shutil
+from collections import defaultdict
 from uuid import uuid4
 
 router = APIRouter()
@@ -21,6 +26,103 @@ async def get_current_user(user = Depends(user_auth)):
         avatar=user.avatar,
         points=user.points
     )
+
+
+@router.get("/progress/{username}", response_model=UserProgressResponse)
+async def get_user_progress(username):
+    user = await User.get_or_none(username=username)
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found"
+        )
+
+    completed_results = await Results.filter(
+        user=user,
+        points_earned__gt=0
+    ).prefetch_related('task')
+    
+    total_points = sum(result.points_earned for result in completed_results)
+    
+    tasks_by_level = defaultdict(int)
+    for result in completed_results:
+        tasks_by_level[result.task.level] += 1
+    
+    recent_results = await Results.filter(
+        user=user
+    ).limit(10).prefetch_related('task')
+
+    recent_results_schema = [
+        ResultResponseSchema(
+            id=result.id,
+            task=Task(
+                id=result.task.id,
+                name=result.task.name,
+                description=result.task.description,
+                level=result.task.level,
+                db_path=result.task.db_path,
+                price=result.task.price
+            ),
+            user=UserResponseSchema(
+                name=user.name,
+                username=user.username,
+                description=user.description,
+                avatar=user.avatar,
+                points=user.points
+            ),
+            points_earned=result.points_earned
+        )
+        for result in recent_results
+    ]
+
+    statistics = UserTaskStatistics(
+        total_tasks_completed=len(completed_results),
+        total_points_earned=total_points,
+        tasks_by_level=dict(tasks_by_level),
+        recent_results=recent_results_schema
+    )
+
+    return UserProgressResponse(statistics=statistics)
+
+@router.get("/all", response_model=UsersResponseSchema)
+async def get_all_users():
+    return UsersResponseSchema(
+        users=[UserResponseSchema(
+                name=user.name,
+                username=user.username,
+                description=user.description,
+                avatar=user.avatar,
+                points=user.points
+    ) for user in await User.all()])
+
+@router.get("/top", response_model=UsersResponseSchema)
+async def top_users():
+    return UsersResponseSchema(
+        users=[UserResponseSchema(
+                name=user.name,
+                username=user.username,
+                description=user.description,
+                avatar=user.avatar,
+                points=user.points
+    ) for user in await User.all().order_by("-points").limit(100)])
+
+@router.get("/{username}", response_model=UserResponseSchema)
+async def get_user_by_username(username: str):
+    user = await User.get_or_none(username=username)
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found"
+        )
+
+    return UserResponseSchema(
+        name=user.name,
+        username=user.username,
+        description=user.description,
+        avatar=user.avatar,
+        points=user.points
+    )
+    
 
 @router.patch("/profile", response_model=UserResponseSchema)
 async def update_profile(

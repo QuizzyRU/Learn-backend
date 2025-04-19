@@ -4,7 +4,6 @@ fastapi
 python-jose[cryptography]
 passlib[bcrypt]
 python-multipart
-python-telegram-bot
 httpx
 itsdangerous
 starlette
