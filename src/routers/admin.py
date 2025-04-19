@@ -25,6 +25,8 @@ async def upload_task(
     try:
         task = await Tasks.create(
             id=task_id,
+            name=task_data.name,
+            description=task_data.description,
             level=task_data.level,
             db_path=file_path,
             answer=task_data.answer,
